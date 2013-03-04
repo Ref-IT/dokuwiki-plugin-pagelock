@@ -1,0 +1,7 @@
+base   pagelock
+author Michael Braun
+email  michael-dev@fami-braun.de
+date   2013-03-04
+name   pagelock plugin
+desc   Lock pages (=namespace) using acl
+url    https://github.com/michael-dev/dokuwiki-plugin-pagelock
