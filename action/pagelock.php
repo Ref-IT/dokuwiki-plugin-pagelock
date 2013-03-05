@@ -46,7 +46,37 @@ class action_plugin_pagelock_pagelock extends DokuWiki_Action_Plugin {
     }
 
     private function getLockString($ID) {
-        return Array(sprintf("%s\t@ALL\t0", $ID), sprintf("%s:*\t@ALL\t0", $ID));
+        global $AUTH_ACL;
+        // find lowest level for this page
+        $ID = trim($ID, ':');
+        $ids = explode(':', $ID);
+        $matches = Array();
+        for ($i=count($ids)-1; $i >= 0; $i--) {
+          $subids = array_slice($ids, 0, $i);
+          $subid = trim(implode(':', $subids).':*',':');
+          $matches = preg_grep('/^'.preg_quote($subid, '/').'\s+(\S+)\s+(\S+)/ui', $AUTH_ACL);
+          if(count($matches) > 0) {
+            break;
+          }
+        }
+        $hasALLrule = false;
+        $res = Array();
+        foreach ($matches as $line) {
+          $matchLine = Array();
+          if (preg_match('/^(\S+)\s+(\S+)\s+(\S+)/', $line, $matchLine) === FALSE) {
+            return NULL;
+          }
+          $hasALLrule = ($hasALLrule || (strtoupper($matchLine[2]) == '@ALL'));
+          if ($matchLine[3] > 1) {
+            $res[] = sprintf("%s\t%s\t1", $ID, $matchLine[2]);
+            $res[] = sprintf("%s:*\t%s\t1", $ID, $matchLine[2]);
+          }
+        }
+        if (!$hasALLrule) {
+          return NULL;
+        }
+  
+        return $res;
     }
 
     private function handle_ajax_pagelock_islocked() {
@@ -54,6 +84,7 @@ class action_plugin_pagelock_pagelock extends DokuWiki_Action_Plugin {
 
         $ID = cleanID($INPUT->post->str('id'));
         $expected = $this->getLockString($ID);
+        if ($expected === NULL) return Array("unsupported" => 1);
         $intersect = array_unique(array_intersect($AUTH_ACL, $expected));
         return Array("ret" => (count($expected) == count($intersect)));
     }
@@ -63,7 +94,9 @@ class action_plugin_pagelock_pagelock extends DokuWiki_Action_Plugin {
 
         $ID = cleanID($INPUT->post->str('id'));
         $AUTH_ACL = file($config_cascade['acl']['default'],  FILE_IGNORE_NEW_LINES );
-        io_saveFile($config_cascade['acl']['default'], join(DOKU_LF,array_merge($AUTH_ACL, $this->getLockString($ID))).DOKU_LF);
+        $expected = $this->getLockString($ID);
+        if ($expected === NULL) return Array("error" => $this->getLang("unsupported"));
+        io_saveFile($config_cascade['acl']['default'], join(DOKU_LF,array_merge($AUTH_ACL, $expected)).DOKU_LF);
     }
 
     private function handle_ajax_pagelock_removelock() {
@@ -71,7 +104,9 @@ class action_plugin_pagelock_pagelock extends DokuWiki_Action_Plugin {
 
         $ID = cleanID($INPUT->post->str('id'));
         $AUTH_ACL = file($config_cascade['acl']['default'],  FILE_IGNORE_NEW_LINES );
-        $AUTH_ACL = array_diff($AUTH_ACL, $this->getLockString($ID));
+        $expected = $this->getLockString($ID);
+        if ($expected === NULL) return Array("error" => $this->getLang("unsupported"));
+        $AUTH_ACL = array_diff($AUTH_ACL, $expected);
         io_saveFile($config_cascade['acl']['default'], join(DOKU_LF,$AUTH_ACL).DOKU_LF);
     }
 

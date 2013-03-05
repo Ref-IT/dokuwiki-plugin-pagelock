@@ -5,3 +5,5 @@
 
 $lang['js']['dolock'] = 'Sperren';
 $lang['js']['dounlock'] = 'Entsperren';
+$lang['unsupported'] = 'Diese Aktion ist auf dieser Seite nicht möglich.';
+

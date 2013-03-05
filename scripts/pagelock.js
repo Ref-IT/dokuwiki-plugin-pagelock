@@ -12,14 +12,20 @@ pl.refresh = function() {
           alert(data.msg);
         }
         if (data.error) {
+          pl.elem_li.hide();
           alert(data.error);
         }
-        pl.isLocked = data.ret;
-        if (data.ret) {
-          // islocked = true
-          pl.elem.text(pl.lang.dounlock);
+        if (data.error || data.unsupported) {
+          pl.elem_li.hide();
         } else {
-          pl.elem.text(pl.lang.dolock);
+          pl.elem_li.show();
+          pl.isLocked = data.ret;
+          if (data.ret) {
+            // islocked = true
+            pl.elem.text(pl.lang.dounlock);
+          } else {
+            pl.elem.text(pl.lang.dolock);
+          }
         }
       }
   );
@@ -62,8 +68,8 @@ pl.initialize = function() {
   pl.conf = pagelock_config;
   pl.elem = jQuery('<span/>');
   var elem_a = jQuery('<a href=""/>').append(pl.elem);
-  var elem_li = jQuery('<li/>').append(elem_a);
-  jQuery('#p-namespaces ul').append(elem_li);
+  pl.elem_li = jQuery('<li/>').append(elem_a);
+  jQuery('#p-namespaces ul').append(pl.elem_li);
   pl.elem.click(pl.onClick);
   pl.refresh();
 };
